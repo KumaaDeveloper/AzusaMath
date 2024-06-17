@@ -1,0 +1,17 @@
+name: AzusaMath
+version: 1.0.0
+api: [5.0.0]
+main: KumaDev\Math\Main
+author: KumaDeveloper
+description: A plugin to give maths problems and get rewards
+commands:
+  math:
+    description: Enable or disable the math problems.
+    usage: /math [on/off]
+    permission: math.command
+permissions:
+  math.command:
+    description: Allows the player to enable or disable math problems.
+    default: op
+dependencies:
+  - libPiggyEconomy
