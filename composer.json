@@ -1,0 +1,13 @@
+{
+    "name": "kumadev/azusamath",
+    "description": "A plugin to give maths problems and get rewards",
+    "type": "project",
+    "require": {
+        "dapigguy/libpiggyeconomy": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "KumaDev\\AzusaMath\\": "src/"
+        }
+    }
+}
