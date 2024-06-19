@@ -1,10 +1,17 @@
 {
-    "name": "kumadev/azusamath",
+    "name": "kumadev/math",
     "description": "A plugin to give maths problems and get rewards",
     "type": "project",
+    "license": "MIT",
     "require": {
         "dapigguy/libpiggyeconomy": "dev-master"
     },
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/DaPigGuy/libPiggyEconomy.git"
+		}
+	],
     "autoload": {
         "psr-4": {
             "KumaDev\\AzusaMath\\": "src/"
