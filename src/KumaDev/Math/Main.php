@@ -24,6 +24,8 @@ class Main extends PluginBase implements Listener {
     protected $config;
     protected $currentAnswer = null;
     protected static $economyProvider = null;
+    protected $lastNoAnswerTime = 0;
+    protected $currentQuestionStartTime = 0;
 
     public function onEnable(): void {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
@@ -78,13 +80,15 @@ class Main extends PluginBase implements Listener {
                 if ($args[0] === "on") {
                     if (!$this->mathEnabled) {
                         $this->mathEnabled = true;
-                        $this->scheduleMathTask();
+                        $this->broadcastMathQuestion();
+                        $this->scheduleInitialNoAnswerMessageTask();
                         $sender->sendMessage("§aAzusaMath questions have been enabled.");
                     }
                 } elseif ($args[0] === "off") {
                     $this->mathEnabled = false;
                     if ($this->taskHandler !== null) {
                         $this->taskHandler->cancel();
+                        $this->taskHandler = null;
                         $sender->sendMessage("§cAzusaMath questions have been disabled.");
                     }
                 }
@@ -106,11 +110,11 @@ class Main extends PluginBase implements Listener {
         return $this->config;
     }
 
-    public function setCurrentAnswer(?int $answer): void {
+    public function setCurrentAnswer(?float $answer): void {
         $this->currentAnswer = $answer;
     }
 
-    public function getCurrentAnswer(): ?int {
+    public function getCurrentAnswer(): ?float {
         return $this->currentAnswer;
     }
 
@@ -122,9 +126,25 @@ class Main extends PluginBase implements Listener {
         $this->taskHandler = $handler;
     }
 
+    public function getLastNoAnswerTime(): int {
+        return $this->lastNoAnswerTime;
+    }
+
+    public function setLastNoAnswerTime(int $time): void {
+        $this->lastNoAnswerTime = $time;
+    }
+
+    public function getCurrentQuestionStartTime(): int {
+        return $this->currentQuestionStartTime;
+    }
+
+    public function setCurrentQuestionStartTime(int $time): void {
+        $this->currentQuestionStartTime = $time;
+    }
+
     public function onPlayerJoin(PlayerJoinEvent $event): void {
         if ($this->mathEnabled && $this->taskHandler === null) {
-            $this->scheduleMathTask();
+            $this->scheduleInitialNoAnswerMessageTask();
         }
     }
 
@@ -138,17 +158,13 @@ class Main extends PluginBase implements Listener {
     public function onPlayerChat(PlayerChatEvent $event): void {
         if ($this->currentAnswer !== null) {
             $message = $event->getMessage();
-            if (is_numeric($message) && (int)$message === $this->currentAnswer) {
+            if (is_numeric($message) && round((float)$message, 1) === round($this->currentAnswer, 1)) {
                 $player = $event->getPlayer();
                 $reward = rand($this->config->get("prize_min"), $this->config->get("prize_max"));
                 $this->addMoney($player, $reward);
                 $this->getServer()->broadcastMessage(str_replace("{player}", $player->getName(), str_replace("{money}", $reward, $this->config->get("maths_completion_message"))));
                 $this->currentAnswer = null;
                 $event->cancel();
-
-                if ($this->taskHandler !== null) {
-                    $this->taskHandler->cancel();
-                }
 
                 $this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
                     private $plugin;
@@ -159,7 +175,7 @@ class Main extends PluginBase implements Listener {
 
                     public function onRun(): void {
                         if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
-                            $this->plugin->scheduleMathTask();
+                            $this->plugin->broadcastMathQuestion();
                         }
                     }
                 }, 20 * $this->getConfigData()->get("maths_delay_solved"));
@@ -174,10 +190,96 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    public function scheduleMathTask(): void {
+    public function broadcastMathQuestion(): void {
         if ($this->mathEnabled && count($this->getServer()->getOnlinePlayers()) > 0) {
-            $task = new MathTask($this);
-            $this->setTaskHandler($this->getScheduler()->scheduleDelayedRepeatingTask($task, 0, 20 * $this->getConfigData()->get("problem_interval")));
+            $problem = $this->generateProblem();
+            $this->getServer()->broadcastMessage("Define §f{$problem['number1']} §e{$problem['operator']} §f{$problem['number2']} §e= §f?");
+            $this->setCurrentAnswer($problem['answer']);
+            $this->setCurrentQuestionStartTime(time());
         }
+    }
+
+    public function generateProblem(): array {
+        $operators = ["+", "-", "*", "/"];
+        $operator = $operators[array_rand($operators)];
+        $maxNumber = $this->getConfigData()->get("number_max");
+        $number1 = rand(1, $maxNumber);
+        $number2 = rand(1, $maxNumber);
+
+        if ($operator === "-" || $operator === "/") {
+            if ($number1 < $number2) {
+                $temp = $number1;
+                $number1 = $number2;
+                $number2 = $temp;
+            }
+        }
+
+        $answer = match ($operator) {
+            "+" => $number1 + $number2,
+            "-" => $number1 - $number2,
+            "*" => $number1 * $number2,
+            "/" => round($number1 / $number2, 1),
+        };
+
+        return [
+            'number1' => $number1,
+            'number2' => $number2,
+            'operator' => $operator,
+            'answer' => $answer
+        ];
+    }
+
+    public function scheduleInitialNoAnswerMessageTask(): void {
+        $this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
+            private $plugin;
+
+            public function __construct(Main $plugin) {
+                $this->plugin = $plugin;
+            }
+
+            public function onRun(): void {
+                if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
+                    $this->plugin->scheduleNoAnswerMessageTask();
+                }
+            }
+        }, 20 * $this->getConfigData()->get("math_interval"));
+    }
+
+    public function scheduleNoAnswerMessageTask(): void {
+        $this->setTaskHandler($this->getScheduler()->scheduleRepeatingTask(new class($this) extends Task {
+            private $plugin;
+
+            public function __construct(Main $plugin) {
+                $this->plugin = $plugin;
+            }
+
+            public function onRun(): void {
+                if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
+                    $currentTime = time();
+                    if ($currentTime - $this->plugin->getLastNoAnswerTime() >= $this->plugin->getConfigData()->get("math_interval")) {
+                        $this->plugin->getServer()->broadcastMessage($this->plugin->getConfigData()->get("no_answer_message"));
+                        $this->plugin->setLastNoAnswerTime($currentTime);
+
+                        $this->plugin->getScheduler()->scheduleDelayedTask(new class($this->plugin) extends Task {
+                            private $plugin;
+
+                            public function __construct(Main $plugin) {
+                                $this->plugin = $plugin;
+                            }
+
+                            public function onRun(): void {
+                                if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
+                                    $this->plugin->broadcastMathQuestion();
+                                }
+                            }
+                        }, 20 * $this->plugin->getConfigData()->get("maths_delay_solved"));
+                    }
+                } else {
+                    // Stop task if no players online
+                    $this->plugin->taskHandler->cancel();
+                    $this->plugin->taskHandler = null;
+                }
+            }
+        }, 20 * $this->getConfigData()->get("math_interval")));
     }
 }
