@@ -2,7 +2,7 @@
 
 number_max: 100
 
-# Time lapse for 'no_answer_message' to be displayed
+# Time interval for maths questions to be answered
 math_interval: 60
 
 # Message when the player successfully answers the maths question
@@ -20,4 +20,4 @@ prize_max: 10000
 
 # Economy you are using (Must use LibPiggyEconomy)
 Economy:
-  type: "economyapi" # Change this to your specific economy provider if needed (bedrockeconomy/economyapi)
+  type: "bedrockeconomy" # Change this to your specific economy provider if needed (bedrockeconomy/economyapi)

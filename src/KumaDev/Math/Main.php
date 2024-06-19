@@ -80,8 +80,7 @@ class Main extends PluginBase implements Listener {
                 if ($args[0] === "on") {
                     if (!$this->mathEnabled) {
                         $this->mathEnabled = true;
-                        $this->broadcastMathQuestion();
-                        $this->scheduleInitialNoAnswerMessageTask();
+                        $this->scheduleFirstMathQuestion();
                         $sender->sendMessage("§aAzusaMath questions have been enabled.");
                     }
                 } elseif ($args[0] === "off") {
@@ -200,33 +199,24 @@ class Main extends PluginBase implements Listener {
     }
 
     public function generateProblem(): array {
-        $operators = ["+", "-", "*", "/"];
-        $operator = $operators[array_rand($operators)];
-        $maxNumber = $this->getConfigData()->get("number_max");
-        $number1 = rand(1, $maxNumber);
-        $number2 = rand(1, $maxNumber);
+        return MathTask::generateProblem($this);
+    }
 
-        if ($operator === "-" || $operator === "/") {
-            if ($number1 < $number2) {
-                $temp = $number1;
-                $number1 = $number2;
-                $number2 = $temp;
+    public function scheduleFirstMathQuestion(): void {
+        $this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
+            private $plugin;
+
+            public function __construct(Main $plugin) {
+                $this->plugin = $plugin;
             }
-        }
 
-        $answer = match ($operator) {
-            "+" => $number1 + $number2,
-            "-" => $number1 - $number2,
-            "*" => $number1 * $number2,
-            "/" => round($number1 / $number2, 1),
-        };
-
-        return [
-            'number1' => $number1,
-            'number2' => $number2,
-            'operator' => $operator,
-            'answer' => $answer
-        ];
+            public function onRun(): void {
+                if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
+                    $this->plugin->broadcastMathQuestion();
+                    $this->plugin->scheduleInitialNoAnswerMessageTask();
+                }
+            }
+        }, 20); // 1 second delay
     }
 
     public function scheduleInitialNoAnswerMessageTask(): void {
