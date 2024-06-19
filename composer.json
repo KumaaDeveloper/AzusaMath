@@ -2,7 +2,7 @@
     "name": "kumadev/math",
     "description": "A plugin to give maths problems and get rewards",
     "type": "project",
-    "license": "MIT",
+    "license": "Apache-2.0 license",
     "require": {
         "dapigguy/libpiggyeconomy": "dev-master"
     },
