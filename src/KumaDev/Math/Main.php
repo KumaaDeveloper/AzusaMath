@@ -82,20 +82,30 @@ class Main extends PluginBase implements Listener {
                         $this->mathEnabled = true;
                         $this->scheduleFirstMathQuestion();
                         $sender->sendMessage("§aAzusaMath questions have been enabled.");
+                    } else {
+                        $sender->sendMessage("§cAzusaMath is already enabled.");
                     }
                 } elseif ($args[0] === "off") {
-                    $this->mathEnabled = false;
-                    if ($this->taskHandler !== null) {
-                        $this->taskHandler->cancel();
-                        $this->taskHandler = null;
+                    if ($this->mathEnabled) {
+                        $this->mathEnabled = false;
+                        if ($this->taskHandler !== null) {
+                            $this->taskHandler->cancel();
+                            $this->taskHandler = null;
+                        }
                         $sender->sendMessage("§cAzusaMath questions have been disabled.");
+                    } else {
+                        $sender->sendMessage("§cAzusaMath is already disabled.");
                     }
+                } else {
+                    $sender->sendMessage("§eUsage: /math [on/off]");
                 }
+            } else {
+                $sender->sendMessage("§eUsage: /math [on/off]");
             }
             return true;
         }
         return false;
-    }
+    }    
 
     public function isMathEnabled(): bool {
         return $this->mathEnabled;
