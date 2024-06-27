@@ -1,5 +1,5 @@
 name: AzusaMath
-version: 1.1.2
+version: 1.1.1
 api: [5.0.0]
 main: KumaDev\Math\Main
 author: KumaDeveloper
@@ -8,10 +8,9 @@ commands:
   math:
     description: Enable or disable the math problems.
     usage: /math [on/off]
-    permission: math.command
+    permission: azusamath.command
 permissions:
-  math.command:
+  azusamath.command:
     description: Allows the player to enable or disable math problems.
     default: op
-dependencies:
-  - libPiggyEconomy
+softdepend: [EconomyAPI, BedrockEconomy]
