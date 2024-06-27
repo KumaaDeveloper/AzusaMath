@@ -10,7 +10,7 @@ AzusaMath is a Pocketmine plug-in that functions to provide maths problems and p
 ## Command
 Commands | Default | Permission
 --- | --- | ---
-`/math` | Op | math.command
+`/math` | Op | azusamath.command
 
 ## Configuration
 ```yaml
