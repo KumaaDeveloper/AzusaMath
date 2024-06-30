@@ -17,8 +17,10 @@ Commands | Default | Permission
 ```yaml
 # Configuration for AzusaMath plugin
 
-# Time lapse for maths problems to be answered
-problem_interval: 60
+number_max: 100
+
+# Time interval for maths questions to be answered
+math_interval: 60
 
 # Message when the player successfully answers the maths question
 maths_completion_message: "§aCongratulations! §e{player} §asuccessfully answered the maths question correctly §6{money} §aMoney"
@@ -26,17 +28,16 @@ maths_completion_message: "§aCongratulations! §e{player} §asuccessfully answe
 # Message when no one answers the maths question
 no_answer_message: "§cNo one answered the maths question, move on to the next maths question..."
 
-# Delay when question is missed
+# Delay when question is missed or answered
 maths_delay_solved: 5
 
 # Rewards when players successfully answer maths questions
 prize_min: 1000
 prize_max: 10000
-number_max: 100
 
 # Economy you are using (Must use LibPiggyEconomy)
 Economy:
-  type: "economyapi" # Change this to your specific economy provider if needed (bedrockeconomy/economyapi)
+  type: "bedrockeconomy" # Change this to your specific economy provider if needed (bedrockeconomy/economyapi)
 ```
 
 ## Credits & Depend
