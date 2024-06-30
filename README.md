@@ -6,6 +6,7 @@ AzusaMath is a Pocketmine plug-in that functions to provide maths problems and p
 - Custom message
 - Custom prize
 - Custom economy
+- Added a sound when a question appears, answers the question, and no one answers the question.
 
 ## Command
 Commands | Default | Permission
