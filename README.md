@@ -40,9 +40,8 @@ Economy:
   type: "bedrockeconomy" # Change this to your specific economy provider if needed (bedrockeconomy/economyapi)
 ```
 
-## Credits & Depend
+## Depend
 | Authors | Github | Lib |
 |---------|--------|-----|
 | Cooldogepm | [Cooldogepm](https://github.com/cooldogepm) | [BedrockEconomy](https://github.com/cooldogepm/BedrockEconomy) |
 | Mathchat900 | [Mathchat900](https://github.com/mathchat900) | [EconomyAPI](https://github.com/mathchat900/EconomyAPI-PM5) |
-| DaPigGuy | [DaPigGuy](https://github.com/DaPigGuy) | [libPiggyEconomy](https://github.com/DaPigGuy/libPiggyEconomy) |
