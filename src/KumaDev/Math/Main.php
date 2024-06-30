@@ -16,6 +16,7 @@ use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\scheduler\Task;
 use pocketmine\player\Player;
+use pocketmine\network\mcpe\protocol\PlaySoundPacket;
 
 class Main extends PluginBase implements Listener {
 
@@ -24,7 +25,6 @@ class Main extends PluginBase implements Listener {
     protected $config;
     protected $currentAnswer = null;
     protected static $economyProvider = null;
-    protected $lastNoAnswerTime = 0;
     protected $currentQuestionStartTime = 0;
 
     public function onEnable(): void {
@@ -135,14 +135,6 @@ class Main extends PluginBase implements Listener {
         $this->taskHandler = $handler;
     }
 
-    public function getLastNoAnswerTime(): int {
-        return $this->lastNoAnswerTime;
-    }
-
-    public function setLastNoAnswerTime(int $time): void {
-        $this->lastNoAnswerTime = $time;
-    }
-
     public function getCurrentQuestionStartTime(): int {
         return $this->currentQuestionStartTime;
     }
@@ -153,7 +145,7 @@ class Main extends PluginBase implements Listener {
 
     public function onPlayerJoin(PlayerJoinEvent $event): void {
         if ($this->mathEnabled && $this->taskHandler === null) {
-            $this->scheduleInitialNoAnswerMessageTask();
+            $this->scheduleFirstMathQuestion();
         }
     }
 
@@ -175,6 +167,16 @@ class Main extends PluginBase implements Listener {
                 $this->currentAnswer = null;
                 $event->cancel();
 
+                // Play level-up sound effect for all players
+                $this->broadcastSound($player, "random.levelup");
+
+                // Cancel the current task to prevent the no-answer message from appearing
+                if ($this->taskHandler !== null) {
+                    $this->taskHandler->cancel();
+                    $this->taskHandler = null;
+                }
+
+                // Schedule next question after the delay
                 $this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
                     private $plugin;
 
@@ -205,6 +207,14 @@ class Main extends PluginBase implements Listener {
             $this->getServer()->broadcastMessage("Define §f{$problem['number1']} §e{$problem['operator']} §f{$problem['number2']} §e= §f?");
             $this->setCurrentAnswer($problem['answer']);
             $this->setCurrentQuestionStartTime(time());
+
+            // Play bell sound effect for all players
+            foreach ($this->getServer()->getOnlinePlayers() as $player) {
+                $this->playSound($player, "note.bell");
+            }
+
+            // Schedule the no-answer message task
+            $this->scheduleNoAnswerMessageTask();
         }
     }
 
@@ -223,30 +233,13 @@ class Main extends PluginBase implements Listener {
             public function onRun(): void {
                 if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
                     $this->plugin->broadcastMathQuestion();
-                    $this->plugin->scheduleInitialNoAnswerMessageTask();
                 }
             }
         }, 20); // 1 second delay
     }
 
-    public function scheduleInitialNoAnswerMessageTask(): void {
-        $this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
-            private $plugin;
-
-            public function __construct(Main $plugin) {
-                $this->plugin = $plugin;
-            }
-
-            public function onRun(): void {
-                if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
-                    $this->plugin->scheduleNoAnswerMessageTask();
-                }
-            }
-        }, 20 * $this->getConfigData()->get("math_interval"));
-    }
-
     public function scheduleNoAnswerMessageTask(): void {
-        $this->setTaskHandler($this->getScheduler()->scheduleRepeatingTask(new class($this) extends Task {
+        $this->setTaskHandler($this->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
             private $plugin;
 
             public function __construct(Main $plugin) {
@@ -255,11 +248,16 @@ class Main extends PluginBase implements Listener {
 
             public function onRun(): void {
                 if ($this->plugin->isMathEnabled() && count($this->plugin->getServer()->getOnlinePlayers()) > 0) {
-                    $currentTime = time();
-                    if ($currentTime - $this->plugin->getLastNoAnswerTime() >= $this->plugin->getConfigData()->get("math_interval")) {
+                    if ($this->plugin->getCurrentAnswer() !== null) {
                         $this->plugin->getServer()->broadcastMessage($this->plugin->getConfigData()->get("no_answer_message"));
-                        $this->plugin->setLastNoAnswerTime($currentTime);
+                        $this->plugin->setCurrentAnswer(null);
 
+                        // Play bass attack sound effect for all players
+                        foreach ($this->plugin->getServer()->getOnlinePlayers() as $player) {
+                            $this->plugin->playSound($player, "note.bassattack");
+                        }
+
+                        // Schedule the next question after the delay
                         $this->plugin->getScheduler()->scheduleDelayedTask(new class($this->plugin) extends Task {
                             private $plugin;
 
@@ -274,12 +272,33 @@ class Main extends PluginBase implements Listener {
                             }
                         }, 20 * $this->plugin->getConfigData()->get("maths_delay_solved"));
                     }
-                } else {
-                    // Stop task if no players online
-                    $this->plugin->taskHandler->cancel();
-                    $this->plugin->taskHandler = null;
                 }
             }
         }, 20 * $this->getConfigData()->get("math_interval")));
+    }
+
+    public function playSound(Player $player, string $soundName): void {
+        $pk = new PlaySoundPacket();
+        $pk->soundName = $soundName;
+        $pk->x = $player->getPosition()->getX();
+        $pk->y = $player->getPosition()->getY();
+        $pk->z = $player->getPosition()->getZ();
+        $pk->volume = 1;
+        $pk->pitch = 1;
+        $player->getNetworkSession()->sendDataPacket($pk);
+    }
+
+    public function broadcastSound(Player $originPlayer, string $soundName): void {
+        $pk = new PlaySoundPacket();
+        $pk->soundName = $soundName;
+        $pk->x = $originPlayer->getPosition()->getX();
+        $pk->y = $originPlayer->getPosition()->getY();
+        $pk->z = $originPlayer->getPosition()->getZ();
+        $pk->volume = 1;
+        $pk->pitch = 1;
+        
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            $player->getNetworkSession()->sendDataPacket($pk);
+        }
     }
 }
