@@ -163,7 +163,11 @@ class Main extends PluginBase implements Listener {
                 $player = $event->getPlayer();
                 $reward = rand($this->config->get("prize_min"), $this->config->get("prize_max"));
                 $this->addMoney($player, $reward);
-                $this->getServer()->broadcastMessage(str_replace("{player}", $player->getName(), str_replace("{money}", $reward, $this->config->get("maths_completion_message"))));
+                $this->getServer()->broadcastMessage(str_replace(
+                    ["{player}", "{answer}", "{money}"],
+                    [$player->getName(), $this->currentAnswer, $reward],
+                    $this->config->get("maths_completion_message")
+                ));
                 $this->currentAnswer = null;
                 $event->cancel();
 
@@ -210,7 +214,7 @@ class Main extends PluginBase implements Listener {
 
             // Play bell sound effect for all players
             foreach ($this->getServer()->getOnlinePlayers() as $player) {
-                $this->playSound($player, "note.bell");
+                $this->broadcastSound($player, "note.bell");
             }
 
             // Schedule the no-answer message task
@@ -254,7 +258,7 @@ class Main extends PluginBase implements Listener {
 
                         // Play bass attack sound effect for all players
                         foreach ($this->plugin->getServer()->getOnlinePlayers() as $player) {
-                            $this->plugin->playSound($player, "note.bassattack");
+                            $this->broadcastSound($player, "note.bassattack");
                         }
 
                         // Schedule the next question after the delay
@@ -275,17 +279,6 @@ class Main extends PluginBase implements Listener {
                 }
             }
         }, 20 * $this->getConfigData()->get("math_interval")));
-    }
-
-    public function playSound(Player $player, string $soundName): void {
-        $pk = new PlaySoundPacket();
-        $pk->soundName = $soundName;
-        $pk->x = $player->getPosition()->getX();
-        $pk->y = $player->getPosition()->getY();
-        $pk->z = $player->getPosition()->getZ();
-        $pk->volume = 1;
-        $pk->pitch = 1;
-        $player->getNetworkSession()->sendDataPacket($pk);
     }
 
     public function broadcastSound(Player $originPlayer, string $soundName): void {
