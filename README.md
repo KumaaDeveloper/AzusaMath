@@ -23,7 +23,7 @@ number_max: 100
 math_interval: 60
 
 # Message when the player successfully answers the maths question
-maths_completion_message: "§aCongratulations! §e{player} §asuccessfully answered the maths question correctly §6{money} §aMoney"
+maths_completion_message: "§e{player} §fanswers §a\"{answer}\" §fand gets a prize of §6{money} §fMoney"
 
 # Message when no one answers the maths question
 no_answer_message: "§cNo one answered the maths question, move on to the next maths question..."
