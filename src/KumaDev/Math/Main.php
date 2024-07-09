@@ -258,7 +258,7 @@ class Main extends PluginBase implements Listener {
 
                         // Play bass attack sound effect for all players
                         foreach ($this->plugin->getServer()->getOnlinePlayers() as $player) {
-                            $this->broadcastSound($player, "note.bassattack");
+                            $this->plugin->broadcastSound($player, "note.bassattack");
                         }
 
                         // Schedule the next question after the delay
